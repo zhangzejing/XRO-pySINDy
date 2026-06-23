@@ -1,0 +1,9 @@
+# XRO-pySINDy 运行依赖（括号内为开发测试版本）
+numpy            # (2.3.5)
+scipy            # (1.x)
+pandas           # (2.x)
+xarray           # (2025.10.1)
+netCDF4          # 读取 .nc 指数文件
+scikit-learn     # Ridge / STLSQ 线性代数后端
+matplotlib       # 绘图
+pysindy>=2.0     # (2.0.0) SINDy 框架
