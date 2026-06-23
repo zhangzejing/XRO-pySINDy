@@ -16,10 +16,10 @@ RK4 把系统从最新观测向前积分，得到逐月预报。相比纯线性 
 最短路径（约 30 秒跑通，用随项目附带的数据）：
 
 ```bash
-# 1. 安装依赖（若已有装好 pysindy 的 conda 环境，可跳过、直接复用）
+# 1. 安装依赖
 pip install -r requirements.txt
 
-# 2. 一行跑通：读取 ORAS5 指数、训练 SN-XRO、出预报图
+# 2. 一行跑通：读取 ORAS5 指数、训练 SN-XRO、给出预报图
 python run_forecast.py
 ```
 
@@ -86,7 +86,7 @@ $$\hat{\Xi}=\arg\min_{\Xi}\ \tfrac12\big\|\dot{\mathbf{X}}-\Theta(\mathbf{X})\,\
 
 ```
 XRO-pySINDy/
-├── run_forecast.py            # 最小实时预报脚本（入口）
+├── run_forecast.py            # 最小实时预报脚本入口
 ├── sindyro/
 │   ├── __init__.py
 │   ├── core.py                # 引擎：特征库 / 优化器 / RK4 积分器 / 技巧评估
