@@ -103,10 +103,21 @@ def build_snxro_model(var_names, ac_order=2,
     return model
 
 
-def build_xro_model(var_names, ac_order=2, alpha_linear=0.0):
+# XRO 原型在 Niño3.4 / WWV 方程中规定的非线性项（与参考笔记本 model_std 的 mask 一致）。
+XRO_MASK_STD = {
+    'Nino34': ['Nino34*Nino34', 'Nino34*WWV', 'Nino34^3'],
+    'WWV':    ['WWV*WWV', 'Nino34*Nino34', 'WWV^3'],
+}
+
+
+def build_xro_model(var_names, ac_order=2,
+                    threshold=0.01, alpha_linear=0.0, alpha_nonlinear=10.0):
     """
-    构建线性 XRO（Extended Recharge Oscillator）基线模型 —— 仅含季节调制线性块，
-    不引入任何非线性项，作为 SN-XRO 的对照基线。
+    构建标准 XRO（Extended nonlinear Recharge Oscillator）基线模型，作为 SN-XRO 的对照。
+
+    与 SN-XRO 不同，XRO 的非线性项是**物理预设**的：仅 Niño3.4、WWV 方程引入
+    XRO 原型规定的少数二次 / 三次自身项（见 ``XRO_MASK_STD``），其余方程纯线性。
+    设置与参考笔记本 `xro_pysindy.ipynb` 的 `model_std` 完全一致。
 
     Returns
     -------
@@ -117,19 +128,19 @@ def build_xro_model(var_names, ac_order=2, alpha_linear=0.0):
 
     feature_library = SeasonalNonlinearLibrary(
         ac_order=ac_order,
-        include_quadratic=False,   # 纯线性
-        include_cubic_self=False,
+        include_quadratic=True,
+        include_cubic_self=True,
         include_cubic_couple=False,
         nth_only=False,
-        mask_nt=None,
+        mask_nt=XRO_MASK_STD,      # 物理预设的 XRO 非线性项
         var_names=var_names,
     )
     optimizer = HybridOptimizer(
         n_vars=n_vars,
         n_seasonal_terms=n_seasonal_terms,
-        threshold=0.0,
+        threshold=threshold,
         alpha_linear=alpha_linear,
-        alpha_nonlinear=0.0,
+        alpha_nonlinear=alpha_nonlinear,
     )
     model = ps.SINDy(
         feature_library=feature_library,
@@ -231,14 +242,16 @@ def _annotate_extreme(ax, times, values, mask, pick, color, prefer='above'):
             text_y = min(value + gap, ylim_high - margin)
             va = 'bottom'
 
-    ha = 'center'
-    if idx == 0:
-        ha = 'left'
-    elif idx == len(times) - 1:
-        ha = 'right'
+    # 横向偏移文字，使箭头略微倾斜，避开标注点处（垂直的）误差棒
+    span = times[-1] - times[0]
+    x_off = span * 0.045
+    if idx > len(times) * 0.75:        # 靠近右端则朝左偏
+        text_x, ha = times[idx] - x_off, 'right'
+    else:                              # 否则朝右偏
+        text_x, ha = times[idx] + x_off, 'left'
 
     ax.annotate(
-        f'{value:.2f}', xy=(times[idx], value), xytext=(times[idx], text_y),
+        f'{value:.2f}', xy=(times[idx], value), xytext=(text_x, text_y),
         textcoords='data', ha=ha, va=va, fontsize=13, color=color,
         arrowprops=dict(arrowstyle='->', color=color, linewidth=0.7, shrinkA=2, shrinkB=2))
 
@@ -307,8 +320,8 @@ def plot_realtime_forecast(obs_dates, obs_vals, forecast_times, forecast_vals,
     if forecast_err is not None:
         forecast_err = np.abs(np.asarray(forecast_err, dtype=float))
         ax.errorbar(forecast_times, forecast_vals, yerr=forecast_err,
-                    fmt='none', ecolor='#0072B2', elinewidth=1.1,
-                    capsize=2.8, capthick=1.0, alpha=0.5, zorder=2.5,
+                    fmt='none', ecolor='#0072B2', elinewidth=1.2,
+                    capsize=2.8, capthick=1.1, zorder=2.5,
                     label='±RMSE (validation)')
 
     ax.axhline(0, color='#111827', linewidth=0.7, linestyle=':')
