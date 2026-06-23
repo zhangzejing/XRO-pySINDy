@@ -51,7 +51,7 @@ python run_forecast.py --data data/XRO_indices_oras5.nc  # 换数据集
 其逐月演变看作一个动力系统 $\dot{\mathbf{x}}=\mathbf{f}(\mathbf{x},t)$。[SINDy](https://github.com/dynamicslab/pysindy)
 假设 $\mathbf{f}$ 可由一个**候选函数库** $\Theta$（线性、二次、……项）线性张成，且真正起作用的项**很少**：
 
-$$\dot{\mathbf{X}} \;=\; \Theta(\mathbf{X},t)\,\Xi,
+$$\dot{\mathbf{X}} = \Theta(\mathbf{X},t)\,\Xi
 \qquad \Theta=[\,\boldsymbol{\theta}_1,\ \boldsymbol{\theta}_2,\ \dots\,],$$
 
 其中 $\Xi$ 是**稀疏**系数矩阵——大多数候选项的系数为 $0$，从而方程既可解释、又不过拟合。
@@ -63,9 +63,9 @@ $$\boldsymbol{\phi}(t)=\big[\,1,\ \sin\omega t,\ \cos\omega t,\ \dots,\ \sin a\o
 
 **SN-XRO 的方程。** 第 $i$ 个指数的演变写成线性块 + 二次非线性块：
 
-$$\dot{x}_i \;=\;
+$$\dot{x}_i =
 \underbrace{\sum_{j}\big(\mathbf{L}_{ij}\!\cdot\!\boldsymbol{\phi}(t)\big)\,x_j}_{\text{线性块（所有方程，Ridge 拟合）}}
-\;+\;
++
 \underbrace{\sum_{p\le q}\big(\mathbf{Q}^{(i)}_{pq}\!\cdot\!\boldsymbol{\phi}(t)\big)\,x_p x_q}_{\text{二次块（仅 }i\in\{\text{Niño3.4, WWV}\}\text{，STLSQ 稀疏回归）}}$$
 
 线性块刻画 XRO 振子的主体动力；二次块只在 Niño3.4、WWV 两个核心方程启用，引入 ENSO 的非线性反馈。
