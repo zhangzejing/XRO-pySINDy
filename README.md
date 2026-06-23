@@ -1,44 +1,16 @@
 # XRO-pySINDy
 
-基于 [PySINDy](https://github.com/dynamicslab/pysindy) 的**Extended Recharge-Oscillator（XRO）**，即 **SN-XRO，Sparse-Nonlinear Extended Recharge-Oscillator**
-ENSO 实时预报工具包。
+基于 [PySINDy](https://github.com/dynamicslab/pysindy) 复现并扩展 [XRO 模型](https://github.com/senclimate/XRO)
+的 ENSO 实时预报工具包。
 
-模型把 Niño3.4、WWV 等 10 个气候指数当作一个季节调制的动力系统：
+[**XRO**](https://github.com/senclimate/XRO)（Extended nonlinear Recharge Oscillator，
+[Zhao et al., *Nature*, 2024](https://doi.org/10.1038/s41586-024-07534-6)）把 Niño3.4、WWV 等
+10 个气候模态指数耦合成一个**季节调制的低阶动力系统**。本项目在其线性框架之上，用
+[SINDy](https://github.com/dynamicslab/pysindy) 的**稀疏回归**仅为 Niño3.4、WWV 两个核心方程
+引入少量二次非线性项，得到 **SN-XRO（Sparse-Nonlinear Extended Recharge-Oscillator）**；训练后用
+RK4 把系统从最新观测向前积分，得到逐月预报。相比纯线性 XRO，SN-XRO 在**较长提前期上预报技巧略有领先**。
 
-- **线性块**：所有指数的线性项 × 年循环傅里叶基（`ac_order` 阶），用 Ridge 拟合。
-- **非线性块**：仅 Niño3.4、WWV 两个方程引入二次项，用 STLSQ 做稀疏回归。
-
-训练后用 RK4 把系统从最新观测向前积分，得到逐月预报。
-
----
-
-## 什么是稀疏非线性模型与 SINDy
-
-**动力系统视角。** 把每个气候指数的逐月演变看成一个动力系统：
-
-```
-dx/dt = f(x, seasonal cycles)
-```
-
-其中 `x` 是所有指数组成的状态向量，`f` 是支配它们如何随时间变化的（含季节调制的）函数。
-建模的目标，就是**从历史观测数据里反推出这个 `f`**。
-
-**为什么要"稀疏非线性"。** `f` 里除了线性项，还可能有各种非线性项（二次、三次、变量间的耦合
-项……）。候选项很多，但真实物理系统中真正起作用的往往只有少数几个。如果把所有候选项都塞进去
-拟合，模型会过拟合、也难以解释。**稀疏回归**（如 STLSQ，序贯阈值最小二乘）的作用，就是在一大堆
-候选项里**只挑出少数几个非零系数**，得到一个既简洁可解释、又不过拟合的方程。
-
-**SINDy 一句话。** [SINDy](https://github.com/dynamicslab/pysindy)（Sparse Identification of
-Nonlinear Dynamics，稀疏非线性动力学辨识）的思路是：先构造一个**候选函数库**（线性项 + 各类
-非线性项），再用稀疏回归从库里选出**最少**的项来拟合 `dx/dt`，从而"发现"支配方程。
-
-**对应到本项目（SN-XRO）。** 本工具包基于 PySINDy，用一个自定义特征库 + 自定义优化器实现
-"季节调制 + 稀疏非线性"：
-
-- **线性块**：所有指数的线性项 × 年循环傅里叶基（`ac_order` 阶），用 **Ridge** 拟合 ——
-  刻画 XRO 振子的主体动力。
-- **非线性块**：仅 Niño3.4、WWV 两个方程引入二次项，用 **STLSQ 稀疏回归** 只保留少数关键项
-  —— 即 **SN-XRO（Sparse-Nonlinear Extended RO）**。
+> 模型的数学形式见下文 [稀疏非线性模型与 SINDy](#稀疏非线性模型与-sindy)。
 
 ---
 
@@ -73,6 +45,43 @@ python run_forecast.py --data data/XRO_indices_oras5.nc  # 换数据集
 | `--start` | `1979-01` | 训练起始月（建议某年 1 月，季节相位对齐）|
 | `--horizon` | `20` | 预报提前期（月）|
 | `--n-obs-show` | `6` | 图中展示的历史观测月数 |
+
+---
+
+## 稀疏非线性模型与 SINDy
+
+**动力系统与候选库。** 把 $n=10$ 个指数的距平堆成状态向量 $\mathbf{x}(t)\in\mathbb{R}^{n}$，
+其逐月演变看作一个动力系统 $\dot{\mathbf{x}}=\mathbf{f}(\mathbf{x},t)$。[SINDy](https://github.com/dynamicslab/pysindy)
+假设 $\mathbf{f}$ 可由一个**候选函数库** $\Theta$（线性、二次、……项）线性张成，且真正起作用的项**很少**：
+
+$$\dot{\mathbf{X}} \;=\; \Theta(\mathbf{X},t)\,\Xi,
+\qquad \Theta=[\,\boldsymbol{\theta}_1,\ \boldsymbol{\theta}_2,\ \dots\,],$$
+
+其中 $\Xi$ 是**稀疏**系数矩阵——大多数候选项的系数为 $0$，从而方程既可解释、又不过拟合。
+
+**季节调制。** 每个系数都不是常数，而是随年循环变化，用 $a=$ `ac_order` 阶傅里叶基
+$\boldsymbol{\phi}(t)$ 展开（$\omega=2\pi/12$，月为单位）：
+
+$$\boldsymbol{\phi}(t)=\big[\,1,\ \sin\omega t,\ \cos\omega t,\ \dots,\ \sin a\omega t,\ \cos a\omega t\,\big].$$
+
+**SN-XRO 的方程。** 第 $i$ 个指数的演变写成线性块 + 二次非线性块：
+
+$$\dot{x}_i \;=\;
+\underbrace{\sum_{j}\big(\mathbf{L}_{ij}\!\cdot\!\boldsymbol{\phi}(t)\big)\,x_j}_{\text{线性块（所有方程，Ridge 拟合）}}
+\;+\;
+\underbrace{\sum_{p\le q}\big(\mathbf{Q}^{(i)}_{pq}\!\cdot\!\boldsymbol{\phi}(t)\big)\,x_p x_q}_{\text{二次块（仅 }i\in\{\text{Niño3.4, WWV}\}\text{，STLSQ 稀疏回归）}}$$
+
+线性块刻画 XRO 振子的主体动力；二次块只在 Niño3.4、WWV 两个核心方程启用，引入 ENSO 的非线性反馈。
+
+**稀疏回归（STLSQ）。** 非线性块的系数用**序贯阈值最小二乘**求解——每轮先做岭回归，再把绝对值
+小于阈值 $\lambda$（`threshold`）的系数置零，迭代至收敛：
+
+$$\hat{\Xi}=\arg\min_{\Xi}\ \tfrac12\big\|\dot{\mathbf{X}}-\Theta(\mathbf{X})\,\Xi\big\|_2^2+\alpha\|\Xi\|_2^2,
+\qquad \text{并令 } |\xi|<\lambda \text{ 的项 } \xi\!\leftarrow\!0 \text{ 后重复。}$$
+
+线性块改用普通岭回归（Ridge）保留全部线性项；二者由自定义优化器 `HybridOptimizer` 组合，
+特征库为 `SeasonalNonlinearLibrary`（`nth_only=True` 时只让 Niño3.4/WWV 带非线性项），均在
+[`sindyro/core.py`](sindyro/core.py) 中。
 
 ---
 
