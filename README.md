@@ -52,14 +52,14 @@ python run_forecast.py --data data/XRO_indices_oras5.nc  # 换数据集
 假设 $\mathbf{f}$ 可由一个**候选函数库** $\Theta$（线性、二次、……项）线性张成，且真正起作用的项**很少**：
 
 $$\dot{\mathbf{X}} = \Theta(\mathbf{X},t)\,\Xi
-\qquad \Theta=[\,\boldsymbol{\theta}_1,\ \boldsymbol{\theta}_2,\ \dots\,],$$
+\qquad \Theta=[\boldsymbol{\theta}_1,\ \boldsymbol{\theta}_2,\ \dots],$$
 
 其中 $\Xi$ 是**稀疏**系数矩阵——大多数候选项的系数为 $0$，从而方程既可解释、又不过拟合。
 
 **季节调制。** 每个系数都不是常数，而是随年循环变化，用 $a=$ `ac_order` 阶傅里叶基
 $\boldsymbol{\phi}(t)$ 展开（$\omega=2\pi/12$，月为单位）：
 
-$$\boldsymbol{\phi}(t)=\big[\,1,\ \sin\omega t,\ \cos\omega t,\ \dots,\ \sin a\omega t,\ \cos a\omega t\,\big].$$
+$$\boldsymbol{\phi}(t)=\big[1,\ \sin\omega t,\ \cos\omega t,\ \dots,\ \sin a\omega t,\ \cos a\omega t\big].$$
 
 **SN-XRO 的方程。** 第 $i$ 个指数的演变写成线性块 + 二次非线性块：
 
