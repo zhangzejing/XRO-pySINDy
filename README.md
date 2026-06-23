@@ -1,7 +1,6 @@
 # XRO-pySINDy
 
-基于 [PySINDy](https://github.com/dynamicslab/pysindy) 复现并扩展 [XRO 模型](https://github.com/senclimate/XRO)
-的 ENSO 实时预报工具包。
+基于 [PySINDy](https://github.com/dynamicslab/pysindy) 复现并扩展 [XRO 模型](https://github.com/senclimate/XRO)的 ENSO 实时预报工具包。
 
 [**XRO**](https://github.com/senclimate/XRO)（Extended nonlinear Recharge Oscillator，
 [Zhao et al., *Nature*, 2024](https://doi.org/10.1038/s41586-024-07534-6)）把 Niño3.4、WWV 等
@@ -9,8 +8,6 @@
 [SINDy](https://github.com/dynamicslab/pysindy) 的**稀疏回归**仅为 Niño3.4、WWV 两个核心方程
 引入少量二次非线性项，得到 **SN-XRO（Sparse-Nonlinear Extended Recharge-Oscillator）**；训练后用
 RK4 把系统从最新观测向前积分，得到逐月预报。相比纯线性 XRO，SN-XRO 在**较长提前期上预报技巧略有领先**。
-
-> 模型的数学形式见下文 [稀疏非线性模型与 SINDy](#稀疏非线性模型与-sindy)。
 
 ---
 
