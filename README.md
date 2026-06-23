@@ -7,7 +7,14 @@
 10 个气候模态指数耦合成一个**季节调制的低阶动力系统**。本项目在其线性框架之上，用
 [SINDy](https://github.com/dynamicslab/pysindy) 的**稀疏回归**仅为 Niño3.4、WWV 两个核心方程
 引入少量二次非线性项，得到 **SN-XRO（Sparse-Nonlinear Extended Recharge-Oscillator）**；训练后用
-RK4 把系统从最新观测向前积分，得到逐月预报。相比纯线性 XRO，SN-XRO 在**较长提前期上预报技巧略有领先**。
+RK4 把系统从最新观测向前积分，得到逐月预报。
+
+**预报技巧（Niño3.4，训练 1979–2002 / 验证 2003–2026）。** 相比纯线性 XRO，SN-XRO 引入的
+稀疏二次项在**中长提前期（≳4 个月）上把距平相关系数略微抬高**（峰值约 +0.07，出现在 14–18 个月），
+代价是 RMSE 略有升高——典型的"改善位相/时相、略增幅度误差"权衡。技巧曲线由
+[`evaluate.py`](evaluate.py) 一键复现（见 [评估与验证](#评估与验证)）：
+
+![SN-XRO vs XRO 预报技巧](figures/skill_comparison.png)
 
 ---
 
@@ -82,11 +89,40 @@ $$\hat{\Xi}=\arg\min_{\Xi}\ \tfrac12\big\|\dot{\mathbf{X}}-\Theta(\mathbf{X})\,\
 
 ---
 
+## 评估与验证
+
+[`evaluate.py`](evaluate.py) 是一个最小评估程序：在 **1979–2002** 上分别拟合 SN-XRO 与线性
+XRO 基线，在 **2003–至今** 上做滚动外推并逐提前期评估技巧——**滚动 1 个月对应 lead 1，2 个月对应
+lead 2**，依此类推。
+
+```bash
+python evaluate.py                       # 默认 Niño3.4，max-lead 24，horizon 20
+python evaluate.py --target WWV          # 评估其它指数
+python evaluate.py --raw-monthly         # 关闭 3 个月滑动平均，按逐月原始序列评估
+```
+
+产出两张图：
+
+1. **技巧对比曲线** `figures/skill_comparison.png`（见上方第一节）：SN-XRO vs XRO 的相关系数与
+   RMSE 随 lead 的变化。技巧按 ENSO 业务惯例对各 lead 序列做 3 个月滑动平均后计算
+   （`--raw-monthly` 可关闭）。
+2. **带误差棒的实时预报** `figures/realtime_<target>_errorbar_<YYYYMM>.png`：用全量数据重训
+   SN-XRO 做实时预报，并把验证集得到的**逐 lead RMSE 以 errorbar** 标注在预报曲线上——
+   误差棒随提前期增大而展宽，直观反映预报不确定度。
+
+![带 RMSE 误差棒的实时预报](figures/realtime_Nino34_errorbar_202605.png)
+
+> 误差棒来自训练/验证划分（仅用 1979–2002 训练）所得的逐 lead RMSE；实时预报曲线本身则由
+> 全量数据重训的 SN-XRO 给出，二者结合即"预报值 ± 历史同期误差"的不确定度估计。
+
+---
+
 ## 目录结构
 
 ```
 XRO-pySINDy/
 ├── run_forecast.py            # 最小实时预报脚本入口
+├── evaluate.py                # 最小评估：SN-XRO vs XRO 技巧曲线 + 误差棒预报图
 ├── sindyro/
 │   ├── __init__.py
 │   ├── core.py                # 引擎：特征库 / 优化器 / RK4 积分器 / 技巧评估

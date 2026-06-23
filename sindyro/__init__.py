@@ -17,6 +17,7 @@ from .core import *          # 特征库 / 优化器 / 积分器 / 技巧评估
 from .forecast import (
     load_indices,
     build_snxro_model,
+    build_xro_model,
     realtime_forecast,
     plot_realtime_forecast,
 )
@@ -24,6 +25,7 @@ from .forecast import (
 __all__ = [
     "load_indices",
     "build_snxro_model",
+    "build_xro_model",
     "realtime_forecast",
     "plot_realtime_forecast",
 ]

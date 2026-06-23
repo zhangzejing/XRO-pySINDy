@@ -103,6 +103,42 @@ def build_snxro_model(var_names, ac_order=2,
     return model
 
 
+def build_xro_model(var_names, ac_order=2, alpha_linear=0.0):
+    """
+    构建线性 XRO（Extended Recharge Oscillator）基线模型 —— 仅含季节调制线性块，
+    不引入任何非线性项，作为 SN-XRO 的对照基线。
+
+    Returns
+    -------
+    model : ps.SINDy   尚未 fit 的模型。调用 model.fit(X, t=1.0, feature_names=var_names) 训练。
+    """
+    n_vars = len(var_names)
+    n_seasonal_terms = {0: 1, 1: 3, 2: 5, 3: 7}[ac_order]
+
+    feature_library = SeasonalNonlinearLibrary(
+        ac_order=ac_order,
+        include_quadratic=False,   # 纯线性
+        include_cubic_self=False,
+        include_cubic_couple=False,
+        nth_only=False,
+        mask_nt=None,
+        var_names=var_names,
+    )
+    optimizer = HybridOptimizer(
+        n_vars=n_vars,
+        n_seasonal_terms=n_seasonal_terms,
+        threshold=0.0,
+        alpha_linear=alpha_linear,
+        alpha_nonlinear=0.0,
+    )
+    model = ps.SINDy(
+        feature_library=feature_library,
+        optimizer=optimizer,
+        differentiation_method=FiniteDifference(order=1),
+    )
+    return model
+
+
 # ---------------------------------------------------------------------------
 # 3. 实时预报（从最新一个月向前外推）
 # ---------------------------------------------------------------------------
@@ -224,7 +260,7 @@ def _add_past_future_arrows(ax, base_month, ylim_low, ylim_high):
 def plot_realtime_forecast(obs_dates, obs_vals, forecast_times, forecast_vals,
                            start, target='Niño3.4', model_name='SN-XRO',
                            history_months=6, shade_events=True,
-                           title=None, save_path=None):
+                           forecast_err=None, title=None, save_path=None):
     """
     绘制 ENSO 实时预报图，样式与参考笔记本完全一致。
 
@@ -236,6 +272,10 @@ def plot_realtime_forecast(obs_dates, obs_vals, forecast_times, forecast_vals,
     target : 目标指数显示名。
     model_name : 预报模型名（图例 / 标题）。
     history_months : 图中展示的历史观测月数。
+    forecast_err : array-like or None
+        与 forecast_vals 等长的逐 lead 误差幅度（如验证集 RMSE），以 errorbar 形式标注在
+        预报曲线上。约定 forecast_err[0]（起报月初值）为 0，forecast_err[k] 对应 lead k。
+        None 则不画误差棒。
     save_path : 保存路径；None 则不保存。
     """
     start = pd.Timestamp(start)
@@ -264,12 +304,22 @@ def plot_realtime_forecast(obs_dates, obs_vals, forecast_times, forecast_vals,
             marker='o', markersize=4.5, markerfacecolor='white', markeredgewidth=1.2,
             label=f'{model_name} forecast')
 
+    if forecast_err is not None:
+        forecast_err = np.abs(np.asarray(forecast_err, dtype=float))
+        ax.errorbar(forecast_times, forecast_vals, yerr=forecast_err,
+                    fmt='none', ecolor='#0072B2', elinewidth=1.1,
+                    capsize=2.8, capthick=1.0, alpha=0.5, zorder=2.5,
+                    label='±RMSE (validation)')
+
     ax.axhline(0, color='#111827', linewidth=0.7, linestyle=':')
     ax.axhline(0.5, color='#d73027', linewidth=0.7, linestyle='--', alpha=0.75)
     ax.axhline(-0.5, color='#4575b4', linewidth=0.7, linestyle='--', alpha=0.75)
     ax.axvline(base_month, color='#111827', linewidth=0.8, linestyle='--', alpha=0.7)
 
     ymin, ymax = np.nanmin(y_vals), np.nanmax(y_vals)
+    if forecast_err is not None:
+        ymin = min(ymin, np.nanmin(np.asarray(forecast_vals) - forecast_err))
+        ymax = max(ymax, np.nanmax(np.asarray(forecast_vals) + forecast_err))
     y_pad = max(0.25, 0.12 * (ymax - ymin if ymax > ymin else 1.0))
     ax.set_ylim(ymin - y_pad, ymax + y_pad)
     _add_past_future_arrows(ax, base_month, ymin - y_pad, ymax + y_pad)
