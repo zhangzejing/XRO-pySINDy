@@ -1,14 +1,14 @@
 """
-evaluate.py —— SN-XRO 最小评估程序，设置与参考笔记本 `xro_pysindy.ipynb` 一致。
+evaluate.py —— SN-XRO 最小评估程序。
 
-数据/划分（与笔记本相同）：
+数据/划分：
   * 数据：data/XRO_indices_oras5.nc（1979-01 ~ 2024-12，10 个气候指数）。
   * 训练：前 12×23 = 276 个月（1979-01 ~ 2001-12）。
   * 验证：其余（2002-01 ~ 2024-12）。
 
 做三件事：
-  1. 在训练集上拟合 **SN-XRO**（model_full：Niño3.4/WWV 全部二次项 + STLSQ 稀疏选择）
-     与 **XRO**（model_std：物理预设的少数二次/三次自身项）两个模型。
+  1. 在训练集上拟合 **SN-XRO**（Niño3.4/WWV 全部二次项 + STLSQ 稀疏选择）
+     与 **XRO**（物理预设的少数二次/三次自身项）两个模型。
   2. 在验证集上滚动外推（滚动 1 个月 = lead 1，依此类推），逐 lead 计算 Niño3.4 的
      相关系数与 RMSE（3 个月滑动平均，is_mv3=True），绘制对比曲线 → figures/skill_comparison.png。
   3. 用**最新数据集**（data/oras5_indices_1958-2026-05.nc）重训 SN-XRO 做实时预报，把验证集
@@ -30,7 +30,7 @@ from sindyro import (
 )
 from sindyro.core import batch_predict_rk4, evaluate_skill, plot_skill_comparison
 
-DATA = 'data/XRO_indices_oras5.nc'                       # 训练/验证：与笔记本一致的数据集
+DATA = 'data/XRO_indices_oras5.nc'                       # 训练/验证用数据集（1979–2024）
 FORECAST_DATA = 'data/oras5_indices_1958-2026-05.nc'     # 实时预报：最新数据集
 DISPLAY = {'Nino34': 'Niño3.4', 'WWV': 'WWV'}
 
@@ -49,7 +49,7 @@ def _rolling_skill(model, X_val, lead_times, var_idx, start_month, is_mv3=True):
 
 
 def main():
-    p = argparse.ArgumentParser(description='SN-XRO vs XRO 技巧评估（设置同 xro_pysindy.ipynb）')
+    p = argparse.ArgumentParser(description='SN-XRO vs XRO 技巧评估')
     p.add_argument('--data', default=DATA, help='训练/验证用指数 NetCDF 路径')
     p.add_argument('--forecast-data', default=FORECAST_DATA, help='实时预报用最新指数 NetCDF 路径')
     p.add_argument('--target', default='Nino34', help='评估的目标指数')
@@ -61,9 +61,9 @@ def main():
     args = p.parse_args()
     is_mv3 = not args.raw_monthly
     j_disp = DISPLAY.get(args.target, args.target)
-    lead_times = list(range(0, args.max_lead + 1))        # 与笔记本一致：含 lead 0
+    lead_times = list(range(0, args.max_lead + 1))        # 含 lead 0（起报月）
 
-    # ---- 1. 读取并按索引切分（与笔记本 n_train = 12×23 一致）----
+    # ---- 1. 读取并按索引切分（n_train = 12 × train_years）----
     X, dates, var_names = load_indices(args.data, start=args.start)
     j = var_names.index(args.target)
     n_train = 12 * args.train_years
@@ -91,7 +91,7 @@ def main():
         print(f"  {name:7s} lead{lead_times[1]}: corr={d['corr'][1]:.3f} rmse={d['rmse'][1]:.3f}  |  "
               f"lead{args.max_lead}: corr={d['corr'][-1]:.3f} rmse={d['rmse'][-1]:.3f}")
 
-    # ---- 4. 技巧对比曲线（样式与笔记本一致）----
+    # ---- 4. 技巧对比曲线 ----
     styles = {
         'XRO':    {'color': 'deepskyblue', 'marker': 'o', 'linewidth': 2,  'markersize': 6, 'alpha': 0.85},
         'SN-XRO': {'color': 'orangered',   'marker': 'x', 'linewidth': 2.,  'markersize': 8, 'alpha': 1.0},

@@ -3,7 +3,7 @@ sindyro —— 基于 PySINDy 的季节调制 Recharge-Oscillator (XRO) ENSO 预
 
 模块组成
 --------
-core      : 引擎。自定义特征库 / 优化器 / RK4 积分器 / 技巧评估（从原 xro_pysindy 项目整理而来）。
+core      : 引擎。自定义特征库 / 优化器 / RK4 积分器 / 技巧评估。
 forecast  : 高层封装。一行构建 SN-XRO 模型、做实时预报、绘制预报图。
 
 最常用的入口

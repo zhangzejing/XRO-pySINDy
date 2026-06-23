@@ -1,10 +1,6 @@
 """
 sindyro.forecast —— 高层封装：构建 SN-XRO 模型、做实时预报、绘制预报图。
 
-绘图部分（plot_realtime_forecast 及其辅助函数）与参考实现
-`RC-ENSO/RCENSO-simple/forecast/forecast_real_time_simple.ipynb` 的样式保持**完全一致**，
-仅数据与模型名（DESN → SN-XRO）不同。
-
 约定
 ----
 * 输入数据为月度气候指数距平（anomaly），第一列推荐为 Nino34，第二列为 WWV。
@@ -103,7 +99,7 @@ def build_snxro_model(var_names, ac_order=2,
     return model
 
 
-# XRO 原型在 Niño3.4 / WWV 方程中规定的非线性项（与参考笔记本 model_std 的 mask 一致）。
+# XRO 原型在 Niño3.4 / WWV 方程中规定的非线性项。
 XRO_MASK_STD = {
     'Nino34': ['Nino34*Nino34', 'Nino34*WWV', 'Nino34^3'],
     'WWV':    ['WWV*WWV', 'Nino34*Nino34', 'WWV^3'],
@@ -117,7 +113,6 @@ def build_xro_model(var_names, ac_order=2,
 
     与 SN-XRO 不同，XRO 的非线性项是**物理预设**的：仅 Niño3.4、WWV 方程引入
     XRO 原型规定的少数二次 / 三次自身项（见 ``XRO_MASK_STD``），其余方程纯线性。
-    设置与参考笔记本 `xro_pysindy.ipynb` 的 `model_std` 完全一致。
 
     Returns
     -------
@@ -170,7 +165,7 @@ def realtime_forecast(model, X, dates, horizon=20):
 
 
 # ===========================================================================
-# 4. 绘图  —— 以下函数与参考笔记本 forecast_real_time_simple.ipynb 样式完全一致
+# 4. 绘图
 # ===========================================================================
 def _to_month_start(ts):
     return pd.Timestamp(ts).to_period('M').to_timestamp()
@@ -275,7 +270,7 @@ def plot_realtime_forecast(obs_dates, obs_vals, forecast_times, forecast_vals,
                            history_months=6, shade_events=True,
                            forecast_err=None, title=None, save_path=None):
     """
-    绘制 ENSO 实时预报图，样式与参考笔记本完全一致。
+    绘制 ENSO 实时预报图。
 
     Parameters
     ----------
@@ -296,7 +291,7 @@ def plot_realtime_forecast(obs_dates, obs_vals, forecast_times, forecast_vals,
     if title is None:
         title = f'{model_name} real-time {target} forecast ({_date_label(start)})'
 
-    # 观测时间统一到「月初」，与参考实现的 standardize_time_to_month_start 一致
+    # 观测时间统一到「月初」
     obs_dates = pd.DatetimeIndex(obs_dates).to_period('M').to_timestamp()
     forecast_times = pd.DatetimeIndex(forecast_times)
 

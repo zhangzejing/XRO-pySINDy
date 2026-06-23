@@ -10,7 +10,7 @@
 **SN-XRO（Sparse-Nonlinear Extended Recharge-Oscillator）**；训练后用 RK4 把系统从最新观测向前积分，
 得到逐月预报。
 
-**预报技巧（Niño3.4，训练 1979–2001 / 验证 2002–2024，与 `xro_pysindy.ipynb` 设置一致）。**
+**预报技巧（Niño3.4，训练 1979–2001 / 验证 2002–2024）。**
 短提前期两者几乎一致；从约 6 个月起 SN-XRO 的数据驱动稀疏非线性逐渐胜出，到 lead 19 时距平相关
 系数 0.34 vs 0.25（**+0.09**）、RMSE 也更低，把相关系数跌破 0.5 的可用预报上限**外推约 1–2 个月**。
 技巧曲线由 [`evaluate.py`](evaluate.py) 一键复现（见 [评估与验证](#评估与验证)）：
@@ -98,10 +98,9 @@ $$\hat{\Xi}=\arg\min_{\Xi}\ \tfrac12\big\|\dot{\mathbf{X}}-\Theta(\mathbf{X})\,\
 
 ## 评估与验证
 
-[`evaluate.py`](evaluate.py) 是一个最小评估程序，**设置与参考笔记本 `xro_pysindy.ipynb` 完全一致**：
-数据用 `data/XRO_indices_oras5.nc`（1979–2024），训练 **1979–2001**（前 12×23 = 276 个月）、验证
-**2002–2024**，对 SN-XRO 与 XRO 基线做滚动外推并逐提前期评估技巧——**滚动 1 个月对应 lead 1，2 个月
-对应 lead 2**，依此类推（lead 0–19）。
+[`evaluate.py`](evaluate.py) 是一个最小评估程序：数据用 `data/XRO_indices_oras5.nc`（1979–2024），
+训练 **1979–2001**（前 12×23 = 276 个月）、验证 **2002–2024**，对 SN-XRO 与 XRO 基线做滚动外推并
+逐提前期评估技巧——**滚动 1 个月对应 lead 1，2 个月对应 lead 2**，依此类推（lead 0–19）。
 
 ```bash
 python evaluate.py                       # 默认 Niño3.4，max-lead 19
