@@ -55,6 +55,11 @@ python run_forecast.py --data data/XRO_indices_oras5.nc  # 换数据集
 
 ## 稀疏非线性模型与 SINDy
 
+SN-XRO 的训练流程一图概览：10 个指数 → 候选函数库 $\Theta(\mathbf{x},t)$（线性 ⊕ 二次，再 ⊗ 季节基）
+→ Ridge + STLSQ 解出**稀疏**系数矩阵 $\Xi$（仅 Niño3.4/WWV 方程保留少数二次项）：
+
+![SN-XRO 训练流程示意](figures/snxro_training.png)
+
 **动力系统与候选库。** 把 $n=10$ 个指数的距平堆成状态向量 $\mathbf{x}(t)\in\mathbb{R}^{n}$，
 其逐月演变看作一个动力系统 $\dot{\mathbf{x}}=\mathbf{f}(\mathbf{x},t)$。[SINDy](https://github.com/dynamicslab/pysindy)
 假设 $\mathbf{f}$ 可由一个**候选函数库** $\Theta$（线性、二次、……项）线性张成，且真正起作用的项**很少**：
